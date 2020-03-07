@@ -1,0 +1,2 @@
+rootProject.name='Absen QR'
+include ':app'

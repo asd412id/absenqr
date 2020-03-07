@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">Absen QR</string>
+    <string name="login_title">ABSEN DIGITAL</string>
+    <string name="login_subtitle">UPTD SMP NEGERI 39 SINJAI</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
+    <string name="btn_login_text">MASUK</string>
+    <string name="btn_login_text_process">MEMPROSES</string>
+    <string name="login_help">Tidak memiliki akun login?\nSilahkan hubungi operator!</string>
+    <string name="copyright">Created by asd412id</string>
+    <string name="ok">OK</string>
+    <string name="app_loading">Memuat Aplikasi</string>
+    <string name="change_server_address">Ganti Alamat Server</string>
+    <string name="try_connect">HUBUNGKAN KEMBALI</string>
+    <string name="no_server_title">Server tidak ditemukan!</string>
+    <string name="no_server_subtitle">Silahkan hubungkan kembali atau ganti alamat server!</string>
+    <string name="insert_activation_code_text">Masukkan Kode Aktivasi</string>
+    <string name="activate_code_hint">Kode Aktivasi</string>
+    <string name="konfirmasi_kode">KONFIRMASI KODE</string>
+    <string name="activation_help_text">Tidak memiliki kode aktivasi?\nSilahkan menghubungi operator!</string>
+    <string name="change_password">Ganti Password</string>
+    <string name="new_password">Password Baru</string>
+    <string name="save">SIMPAN</string>
+    <string name="save_password_hint">Ganti password anda untuk melindungi akun!</string>
+    <string name="dashboard_welcome">Selamat Datang</string>
+    <string name="scan_hint">Scan Hint</string>
+    <string name="scan_btn">Mulai Absen</string>
+    <string name="done">Selesai</string>
+    <string name="processing">Memproses Data</string>
+</resources>

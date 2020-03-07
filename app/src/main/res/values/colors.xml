@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">@android:color/holo_blue_dark</color>
+    <color name="colorPrimaryDark">@android:color/holo_blue_dark</color>
+    <color name="colorBlueDark">#028DBC</color>
+    <color name="colorAccent">@android:color/holo_blue_dark</color>
+    <color name="colorWhite">#FFFFFF</color>
+    <color name="colorPurple">#EA80FC</color>
+    <color name="viewfinder_border">@android:color/holo_blue_dark</color>
+</resources>
