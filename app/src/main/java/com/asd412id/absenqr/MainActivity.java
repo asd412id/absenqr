@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void serverNotFound() {
         if (ip_server!=null){
-            server_addr.setText(ip_server.split(":")[0]);
+            server_addr.setText(ip_server.split(api)[0]);
         }
         progress_wrap.setVisibility(View.GONE);
         noserver_wrap.setVisibility(View.VISIBLE);
