@@ -160,7 +160,7 @@ public class AfterLoginActivity extends AppCompatActivity {
     }
 
     private void changePassword() {
-        String url = "http://"+ip_server+"change-password";
+        String url = "https://"+ip_server+"change-password";
 
         RequestQueue queue = Volley.newRequestQueue(AfterLoginActivity.this);
 
