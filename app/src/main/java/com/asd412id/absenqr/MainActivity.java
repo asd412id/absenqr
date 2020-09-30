@@ -55,7 +55,8 @@ public class MainActivity extends AppCompatActivity {
         configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
         editor = configs.edit();
 
-        ip_server = configs.getString("ip_server","absenqr.webarsip.com"+api);
+//        ip_server = configs.getString("ip_server","absenqr.webarsip.com"+api);
+        ip_server = "absenqr.webarsip.com"+api;
         _token = configs.getString("_token",null);
         progress_wrap = findViewById(R.id.progress_wrap);
         noserver_wrap = findViewById(R.id.noserver_wrap);
