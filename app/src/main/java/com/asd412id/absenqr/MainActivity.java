@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     LinearLayout noserver_wrap;
     EditText server_addr;
     Button server_addr_submit;
-    String api = ":23393/api/v1/";
+    String api = "/api/v1/";
 
     @SuppressLint("CommitPrefEdits")
     @Override
@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
         editor = configs.edit();
 
-        ip_server = configs.getString("ip_server",null);
+        ip_server = configs.getString("ip_server","absenqr.webarsip.com"+api);
         _token = configs.getString("_token",null);
         progress_wrap = findViewById(R.id.progress_wrap);
         noserver_wrap = findViewById(R.id.noserver_wrap);
@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void connectServer(final String ip_server) {
-        String url = "http://"+ip_server+"check-server";
+        String url = "https://"+ip_server+"check-server";
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -126,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         final String addr = subnet+"."+i+api;
-        String url = "http://"+addr+"check-server";
+        String url = "https://"+addr+"check-server";
         final String addrFinal = subnet;
         final int[] ip = {i};
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkLogin() {
-        String url = "http://"+ip_server+"user";
+        String url = "https://"+ip_server+"user";
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {

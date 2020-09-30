@@ -85,7 +85,7 @@ public class AfterLoginActivity extends AppCompatActivity {
     }
 
     private void activateProcess() {
-        String url = "http://"+ip_server+"activate";
+        String url = "https://"+ip_server+"activate";
 
         RequestQueue queue = Volley.newRequestQueue(AfterLoginActivity.this);
 

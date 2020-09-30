@@ -66,6 +66,7 @@
             android:drawableStart="@drawable/ic_computer"
             android:drawablePadding="10dp"
             android:inputType="text"
+            android:visibility="gone"
             android:textColor="@color/colorBlueDark"
             android:background="@drawable/login_input"/>
         <Button

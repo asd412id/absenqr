@@ -71,6 +71,7 @@
                 android:drawableStart="@drawable/ic_username"
                 android:drawablePadding="5dp"
                 android:inputType="text"
+                android:nextFocusDown="@id/password"
                 android:padding="10dp"/>
 
             <EditText
@@ -84,6 +85,7 @@
                 android:drawablePadding="5dp"
                 android:layout_marginTop="10dp"
                 android:inputType="textPassword"
+                android:nextFocusForward="@id/btn_login"
                 android:padding="10dp"/>
 
             <Button

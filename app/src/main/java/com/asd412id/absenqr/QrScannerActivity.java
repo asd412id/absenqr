@@ -58,7 +58,7 @@ public class QrScannerActivity extends AppCompatActivity implements ZXingScanner
     public void handleResult(final Result rawResult) {
         setContentView(R.layout.activity_qr_scanner);
 
-        String url = "http://"+ip_server+"absensi/check";
+        String url = "https://"+ip_server+"absensi/check";
 
         RequestQueue queue = Volley.newRequestQueue(this);
 
