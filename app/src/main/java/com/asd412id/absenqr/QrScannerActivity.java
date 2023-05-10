@@ -1,14 +1,24 @@
 package com.asd412id.absenqr;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import android.location.LocationRequest;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.provider.Settings;
+import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.android.volley.DefaultRetryPolicy;
@@ -19,6 +29,9 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.zxing.Result;
 
 import org.json.JSONException;
@@ -36,32 +49,67 @@ public class QrScannerActivity extends AppCompatActivity implements ZXingScanner
     String ip_server;
     String _token;
 
+    FusedLocationProviderClient fusedLocationClient;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if( ContextCompat.checkSelfPermission(this,android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{android.Manifest.permission.CAMERA},5);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        int devSettings = Settings.Global.getInt(getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED , 0);
+        if(devSettings == 1 || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && locationManager.isProviderEnabled("mock")){
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("Tobatlah!!! Anda ingin memalsukan absensi.")
+                    .setCancelable(false)
+                    .setPositiveButton("TUTUP APLIKASI", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // If user clicks "Yes", terminate the application
+                            finish();
+                            System.exit(0);
+                        }
+                    });
+            AlertDialog alert = builder.create();
+            alert.show();
+        }else{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{android.Manifest.permission.CAMERA}, 5);
+                }
+                if( ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},15);
+                }
             }
+
+            configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
+            ip_server = configs.getString("ip_server", null);
+            _token = configs.getString("_token", null);
+
+            mScannerView = new ZXingScannerView(this);
+            setContentView(mScannerView);
         }
-
-        configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
-        ip_server = configs.getString("ip_server",null);
-        _token = configs.getString("_token",null);
-
-        mScannerView = new ZXingScannerView(this);
-        setContentView(mScannerView);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.S)
     @Override
     public void handleResult(final Result rawResult) {
         setContentView(R.layout.activity_qr_scanner);
 
-        String url = "https://"+ip_server+"absensi/check";
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        fusedLocationClient.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY, cancellationTokenSource.getToken()).addOnSuccessListener(location -> sendData(location, rawResult))
+                .addOnFailureListener(exception ->{
+                    absenError("Terjadi Kesalahan! Perangkat Anda tidak mendukung.");
+                });
+    }
+
+    private void sendData(final Location location, final Result rawResult){
+        String url = ip_server + "absensi/check";
         RequestQueue queue = Volley.newRequestQueue(this);
-
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -93,6 +141,8 @@ public class QrScannerActivity extends AppCompatActivity implements ZXingScanner
             public Map<String, String> getHeaders() {
                 Map<String, String> params = new HashMap<>();
                 params.put("Accept", "application/json");
+                params.put("Latitude", String.valueOf(location.getLatitude()));
+                params.put("Longitude", String.valueOf(location.getLongitude()));
                 params.put("Authorization", _token);
                 params.put("Ruang-Token", rawResult.getText());
                 return params;
@@ -109,7 +159,9 @@ public class QrScannerActivity extends AppCompatActivity implements ZXingScanner
         intent.putExtra("status","error");
         if (message.equals("network")){
             intent.putExtra("error","Server tidak ditemukan!");
-        }else {
+        } else if (message.equals("location")) {
+            intent.putExtra("error","Koordinat lokasi Anda tidak ditemukan!");
+        } else {
             intent.putExtra("error",message);
         }
         Vibrator v = (Vibrator) getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE);

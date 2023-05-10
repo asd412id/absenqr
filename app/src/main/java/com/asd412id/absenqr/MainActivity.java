@@ -1,18 +1,29 @@
 package com.asd412id.absenqr;
 
+import static com.google.gson.internal.$Gson$Types.arrayOf;
+
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NoConnectionError;
@@ -22,6 +33,8 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -44,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     EditText server_addr;
     Button server_addr_submit;
     String api = "/api/v1/";
+    FusedLocationProviderClient fusedLocationClient;
 
     @SuppressLint("CommitPrefEdits")
     @Override
@@ -51,58 +65,60 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        queue = Volley.newRequestQueue(this);
-        configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
-        editor = configs.edit();
-
-//        ip_server = configs.getString("ip_server","absenqr.webarsip.com"+api);
-        ip_server = "absenqr.webarsip.com"+api;
-        _token = configs.getString("_token",null);
-        progress_wrap = findViewById(R.id.progress_wrap);
-        noserver_wrap = findViewById(R.id.noserver_wrap);
-        server_addr = findViewById(R.id.server_addr);
-        server_addr_submit = findViewById(R.id.server_addr_submit);
-
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
-
-        if (ip_server == null) {
-            findServer();
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        int devSettings = Settings.Global.getInt(getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED , 0);
+        if(devSettings == 1 || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && locationManager.isProviderEnabled("mock")){
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("Tobatlah!!! Anda ingin memalsukan absensi.")
+                    .setCancelable(false)
+                    .setPositiveButton("TUTUP APLIKASI", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // If user clicks "Yes", terminate the application
+                            finish();
+                            System.exit(0);
+                        }
+                    });
+            AlertDialog alert = builder.create();
+            alert.show();
         }else{
+            queue = Volley.newRequestQueue(this);
+            configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
+            editor = configs.edit();
+
+//        ip_server = "http://10.0.2.2:8000"+api;
+            ip_server = "https://absen.smpn39sinjai.sch.id"+api;
+            _token = configs.getString("_token",null);
+            progress_wrap = findViewById(R.id.progress_wrap);
+            noserver_wrap = findViewById(R.id.noserver_wrap);
+            server_addr = findViewById(R.id.server_addr);
+            server_addr_submit = findViewById(R.id.server_addr_submit);
+
+            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
+
             connectServer(ip_server);
         }
-
     }
 
     private void connectServer(final String ip_server) {
-        String url = "https://"+ip_server+"check-server";
+        String url = ip_server+"check-server";
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                serverNotFound();
+                try {
+                    editor.putString("ip_server",ip_server);
+                    editor.putString("nama_instansi",response.getString("nama_instansi"));
+                    editor.putString("background",response.getString("background"));
+                    editor.commit();
+                    serverFound();
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                if (error instanceof NoConnectionError || error.networkResponse==null){
-                    serverNotFound();
-                }else{
-                    VolleyError volleyError = new VolleyError(new String(error.networkResponse.data));
-                    try {
-                        JSONObject errorJson = new JSONObject(Objects.requireNonNull(volleyError.getMessage()));
-                        if (error.networkResponse.statusCode==302 && errorJson.getString("status").equals("connected")){
-                            editor.putString("ip_server",ip_server);
-                            editor.putString("nama_instansi",errorJson.getString("nama_instansi"));
-                            editor.putString("background",errorJson.getString("background"));
-                            editor.commit();
-                            serverFound();
-                            return;
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    serverNotFound();
-                }
+                serverNotFound();
             }
         });
         request.setRetryPolicy(new DefaultRetryPolicy(3000,
@@ -110,64 +126,6 @@ public class MainActivity extends AppCompatActivity {
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
         queue.add(request);
-    }
-
-    private void findServer(){
-        WifiManager wifimanager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-        if (wifimanager != null) {
-            subnet = getSubnetAddress(wifimanager.getDhcpInfo().gateway);
-        }
-
-        checkServer(subnet,1);
-    }
-
-    private void checkServer(String subnet,int i){
-        if (i>=255){
-            serverNotFound();
-            return;
-        }
-        final String addr = subnet+"."+i+api;
-        String url = "https://"+addr+"check-server";
-        final String addrFinal = subnet;
-        final int[] ip = {i};
-        request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                ip[0]++;
-                checkServer(addrFinal, ip[0]);
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                if (error instanceof NoConnectionError || error.networkResponse==null){
-                    ip[0]++;
-                    checkServer(addrFinal, ip[0]);
-                }else{
-                    VolleyError volleyError = new VolleyError(new String(error.networkResponse.data));
-                    try {
-                        JSONObject errorJson = new JSONObject(Objects.requireNonNull(volleyError.getMessage()));
-                        if (error.networkResponse.statusCode==302 && errorJson.getString("status").equals("connected")){
-                            editor.putString("ip_server",addr);
-                            editor.putString("nama_instansi",errorJson.getString("nama_instansi"));
-                            editor.putString("background",errorJson.getString("background"));
-                            editor.commit();
-                            serverFound();
-                            return;
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    ip[0]++;
-                    checkServer(addrFinal, ip[0]);
-                }
-            }
-        });
-        request.setRetryPolicy(new DefaultRetryPolicy(200,
-                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
-                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-
-        queue.add(request);
-
     }
 
     private void serverNotFound() {
@@ -181,12 +139,8 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 progress_wrap.setVisibility(View.VISIBLE);
                 noserver_wrap.setVisibility(View.GONE);
-                if (String.valueOf(server_addr.getText()).equals("")){
-                    findServer();
-                }else {
-                    ip_server = server_addr.getText()+api;
-                    connectServer(ip_server);
-                }
+                ip_server = server_addr.getText()+api;
+                connectServer(ip_server);
             }
         });
     }
@@ -200,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkLogin() {
-        String url = "https://"+ip_server+"user";
+        String url = ip_server+"user";
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -269,16 +223,6 @@ public class MainActivity extends AppCompatActivity {
         }
         startActivity(intent);
         finishAffinity();
-    }
-
-    @SuppressLint("DefaultLocale")
-    private String getSubnetAddress(int address)
-    {
-        return String.format(
-            "%d.%d.%d",
-            (address & 0xff),
-            (address >> 8 & 0xff),
-            (address >> 16 & 0xff));
     }
 
 }

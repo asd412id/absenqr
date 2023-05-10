@@ -56,7 +56,7 @@ public class DashboardActivity extends AppCompatActivity {
         dashboard_subtitle.setText(configs.getString("nama_instansi",null));
 
         if (absen==null){
-            scan_hint.setText(Html.fromHtml("Sentuh <b>\"Mulai Absen\"</b> untuk melakukan scan QR Code!"));
+            scan_hint.setText(Html.fromHtml("Pastikan Berada di Lokasi Absensi!<br/><br/>Sentuh <b>\"Mulai Absen\"</b> untuk melakukan scan QR Code!"));
         }else {
             if (absen.getString("status").equals("error")){
                 scan_hint.setText(Html.fromHtml("<b>"+absen.getString("error")));
