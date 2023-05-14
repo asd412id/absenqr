@@ -2,21 +2,16 @@ package com.asd412id.absenqr;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
 import android.location.LocationRequest;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.provider.Settings;
-import android.util.Log;
 
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -55,38 +50,18 @@ public class QrScannerActivity extends AppCompatActivity implements ZXingScanner
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        int devSettings = Settings.Global.getInt(getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED , 0);
-        if(devSettings == 1 || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && locationManager.isProviderEnabled("mock")){
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setMessage("Tobatlah!!! Anda ingin memalsukan absensi.")
-                    .setCancelable(false)
-                    .setPositiveButton("TUTUP APLIKASI", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            // If user clicks "Yes", terminate the application
-                            finish();
-                            System.exit(0);
-                        }
-                    });
-            AlertDialog alert = builder.create();
-            alert.show();
-        }else{
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{android.Manifest.permission.CAMERA}, 5);
-                }
-                if( ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},15);
-                }
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, 5);
             }
-
-            configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
-            ip_server = configs.getString("ip_server", null);
-            _token = configs.getString("_token", null);
-
-            mScannerView = new ZXingScannerView(this);
-            setContentView(mScannerView);
         }
+
+        configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
+        ip_server = configs.getString("ip_server", null);
+        _token = configs.getString("_token", null);
+
+        mScannerView = new ZXingScannerView(this);
+        setContentView(mScannerView);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.S)
