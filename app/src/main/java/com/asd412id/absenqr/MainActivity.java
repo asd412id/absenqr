@@ -197,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
                 intent.setAction("START_ALARM");
 
                 // Set the repeating alarm
-                PendingIntent pendingIntent = PendingIntent.getBroadcast(this, jadwal.getInt("id"), intent, PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(this, jadwal.getInt("id"), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 alarmManager.set(AlarmManager.RTC_WAKEUP, milliseconds, pendingIntent);
             }
         }

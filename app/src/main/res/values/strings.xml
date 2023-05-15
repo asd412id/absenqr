@@ -27,6 +27,7 @@
     <string name="scan_btn">Mulai Absen</string>
     <string name="done">Selesai</string>
     <string name="processing">Memproses Data</string>
-    <string name="api_dev">http://10.0.2.2:8000</string>
+<!--    <string name="api_dev">http://10.0.2.2:8000</string>-->
+    <string name="api_dev">https://absen.smpn39sinjai.sch.id</string>
     <string name="api_prod">https://absen.smpn39sinjai.sch.id</string>
 </resources>

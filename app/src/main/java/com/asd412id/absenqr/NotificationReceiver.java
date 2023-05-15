@@ -26,7 +26,7 @@ public class NotificationReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if ("STOP_ALARM".equals(intent.getAction())) {
             Intent alarmIntent = new Intent(context, NotificationReceiver.class);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, intent.getIntExtra("code", 0), alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, intent.getIntExtra("code", 0), alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
             alarmManager.cancel(pendingIntent);
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -66,7 +66,7 @@ public class NotificationReceiver extends BroadcastReceiver {
             Intent stopIntent = new Intent(context, NotificationReceiver.class);
             stopIntent.setAction("STOP_ALARM");
             stopIntent.putExtra("code", intent.getIntExtra("code", 0));
-            PendingIntent stopPendingIntent = PendingIntent.getBroadcast(context, intent.getIntExtra("code", 0), stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent stopPendingIntent = PendingIntent.getBroadcast(context, intent.getIntExtra("code", 0), stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             builder.addAction(R.drawable.ic_stop, "Hentikan Pengingat", stopPendingIntent);
 
             // Show the notification
