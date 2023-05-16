@@ -71,7 +71,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void loginProcess() {
-        String url = "http://"+ip_server+"login";
+        String url = ip_server+"login";
 
         RequestQueue queue = Volley.newRequestQueue(LoginActivity.this);
 

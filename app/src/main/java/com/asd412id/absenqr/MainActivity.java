@@ -1,18 +1,29 @@
 package com.asd412id.absenqr;
 
 import android.annotation.SuppressLint;
+import android.app.AlarmManager;
+import android.app.AppOpsManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.wifi.WifiManager;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NoConnectionError;
@@ -23,9 +34,13 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -36,14 +51,17 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences.Editor editor;
     RequestQueue queue;
     JsonObjectRequest request;
-    String subnet = null;
     String ip_server;
     String _token;
     LinearLayout progress_wrap;
     LinearLayout noserver_wrap;
     EditText server_addr;
     Button server_addr_submit;
-    String api = ":23393/api/v1/";
+    String api = "/api/v1/";
+    private static final String CHANNEL_ID = "NOTIFICATION";
+    private static final String TAG = "MainActivity";
+    private NotificationManager notificationManager;
+    private static AlarmManager alarmManager;
 
     @SuppressLint("CommitPrefEdits")
     @Override
@@ -51,57 +69,103 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        queue = Volley.newRequestQueue(this);
-        configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
-        editor = configs.edit();
-
-        ip_server = configs.getString("ip_server",null);
-        _token = configs.getString("_token",null);
-        progress_wrap = findViewById(R.id.progress_wrap);
-        noserver_wrap = findViewById(R.id.noserver_wrap);
-        server_addr = findViewById(R.id.server_addr);
-        server_addr_submit = findViewById(R.id.server_addr_submit);
-
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
-
-        if (ip_server == null) {
-            findServer();
-        }else{
-            connectServer(ip_server);
+        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createNotificationChannel();
         }
 
+        // Create alarm manager
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        if(isMockLocationEnabled()){
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("Tobatlah!!! Anda ingin memalsukan absensi.")
+                    .setCancelable(false)
+                    .setPositiveButton("TUTUP APLIKASI", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // If user clicks "Yes", terminate the application
+                            finish();
+                            System.exit(0);
+                        }
+                    });
+            AlertDialog alert = builder.create();
+            alert.show();
+        }else{
+            queue = Volley.newRequestQueue(this);
+            configs = getApplicationContext().getSharedPreferences("configs", Context.MODE_PRIVATE);
+            editor = configs.edit();
+
+            if (BuildConfig.BUILD_TYPE.equals("debug")){
+                ip_server = getString(R.string.api_dev)+api;
+            }else{
+                ip_server = getString(R.string.api_prod)+api;
+            }
+            _token = configs.getString("_token",null);
+            progress_wrap = findViewById(R.id.progress_wrap);
+            noserver_wrap = findViewById(R.id.noserver_wrap);
+            server_addr = findViewById(R.id.server_addr);
+            server_addr_submit = findViewById(R.id.server_addr_submit);
+
+            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
+
+            connectServer(ip_server);
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private void createNotificationChannel() {
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "AbsenQR Alarm Notification Channel",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setDescription("Notification channel for AbsenQR alarm notifications");
+        channel.setSound(null,null);
+        channel.setVibrationPattern(new long[]{1000, 1000, 1000, 1000, 1000});
+        channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        channel.setShowBadge(true);
+        channel.setBypassDnd(true);
+        channel.setLightColor(Color.WHITE);
+        notificationManager.createNotificationChannel(channel);
+    }
+
+    public boolean isMockLocationEnabled() {
+        boolean isMockLocation = false;
+        try {
+            //if marshmallow
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                AppOpsManager opsManager = (AppOpsManager) getApplicationContext().getSystemService(Context.APP_OPS_SERVICE);
+                isMockLocation = (opsManager.checkOp(AppOpsManager.OPSTR_MOCK_LOCATION, android.os.Process.myUid(), BuildConfig.APPLICATION_ID)== AppOpsManager.MODE_ALLOWED);
+            } else {
+                // in marshmallow this will always return true
+                isMockLocation = !android.provider.Settings.Secure.getString(getApplicationContext().getContentResolver(), "mock_location").equals("0");
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return isMockLocation;
     }
 
     private void connectServer(final String ip_server) {
-        String url = "http://"+ip_server+"check-server";
+        String url = ip_server+"check-server";
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                serverNotFound();
+                editor.putString("ip_server",ip_server);
+                try {
+                    editor.putString("nama_instansi",response.getString("nama_instansi"));
+                    editor.putString("background",response.getString("background"));
+                    editor.commit();
+                    serverFound();
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                if (error instanceof NoConnectionError || error.networkResponse==null){
-                    serverNotFound();
-                }else{
-                    VolleyError volleyError = new VolleyError(new String(error.networkResponse.data));
-                    try {
-                        JSONObject errorJson = new JSONObject(Objects.requireNonNull(volleyError.getMessage()));
-                        if (error.networkResponse.statusCode==302 && errorJson.getString("status").equals("connected")){
-                            editor.putString("ip_server",ip_server);
-                            editor.putString("nama_instansi",errorJson.getString("nama_instansi"));
-                            editor.putString("background",errorJson.getString("background"));
-                            editor.commit();
-                            serverFound();
-                            return;
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    serverNotFound();
-                }
+                serverNotFound();
             }
         });
         request.setRetryPolicy(new DefaultRetryPolicy(3000,
@@ -111,62 +175,32 @@ public class MainActivity extends AppCompatActivity {
         queue.add(request);
     }
 
-    private void findServer(){
-        WifiManager wifimanager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-        if (wifimanager != null) {
-            subnet = getSubnetAddress(wifimanager.getDhcpInfo().gateway);
-        }
-
-        checkServer(subnet,1);
-    }
-
-    private void checkServer(String subnet,int i){
-        if (i>=255){
-            serverNotFound();
-            return;
-        }
-        final String addr = subnet+"."+i+api;
-        String url = "http://"+addr+"check-server";
-        final String addrFinal = subnet;
-        final int[] ip = {i};
-        request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                ip[0]++;
-                checkServer(addrFinal, ip[0]);
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                if (error instanceof NoConnectionError || error.networkResponse==null){
-                    ip[0]++;
-                    checkServer(addrFinal, ip[0]);
-                }else{
-                    VolleyError volleyError = new VolleyError(new String(error.networkResponse.data));
-                    try {
-                        JSONObject errorJson = new JSONObject(Objects.requireNonNull(volleyError.getMessage()));
-                        if (error.networkResponse.statusCode==302 && errorJson.getString("status").equals("connected")){
-                            editor.putString("ip_server",addr);
-                            editor.putString("nama_instansi",errorJson.getString("nama_instansi"));
-                            editor.putString("background",errorJson.getString("background"));
-                            editor.commit();
-                            serverFound();
-                            return;
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    ip[0]++;
-                    checkServer(addrFinal, ip[0]);
+    private void createAlarm(JSONArray jadwals) throws JSONException, ParseException {
+        if (jadwals.length() > 0){
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Intent intent = new Intent(this, NotificationReceiver.class);
+            for (int i = 0; i < jadwals.length(); i++) {
+                JSONObject jadwal = jadwals.getJSONObject(i);
+                intent.putExtra("ruang",jadwal.getString("ruang"));
+                intent.putExtra("name",jadwal.getString("name"));
+                intent.putExtra("code", jadwal.getInt("id"));
+                String alarmTime = jadwal.getString("start_cin");
+                Date date;
+                try {
+                    date = format.parse(alarmTime);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error parsing datetime", e);
+                    return;
                 }
+                assert date != null;
+                long milliseconds = date.getTime();
+                intent.setAction("START_ALARM");
+
+                // Set the repeating alarm
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(this, jadwal.getInt("id"), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                alarmManager.set(AlarmManager.RTC_WAKEUP, milliseconds, pendingIntent);
             }
-        });
-        request.setRetryPolicy(new DefaultRetryPolicy(200,
-                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
-                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-
-        queue.add(request);
-
+        }
     }
 
     private void serverNotFound() {
@@ -180,12 +214,8 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 progress_wrap.setVisibility(View.VISIBLE);
                 noserver_wrap.setVisibility(View.GONE);
-                if (String.valueOf(server_addr.getText()).equals("")){
-                    findServer();
-                }else {
-                    ip_server = server_addr.getText()+api;
-                    connectServer(ip_server);
-                }
+                ip_server = server_addr.getText()+api;
+                connectServer(ip_server);
             }
         });
     }
@@ -199,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkLogin() {
-        String url = "http://"+ip_server+"user";
+        String url = ip_server+"user";
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -208,8 +238,14 @@ public class MainActivity extends AppCompatActivity {
                     data = response.getJSONObject("data");
                     editor.putString("name",data.getString("name"));
                     editor.commit();
+
+                    Log.i("LOGIN", String.valueOf(response));
+
+                    createAlarm(response.getJSONArray("jadwals"));
                 } catch (JSONException e) {
                     e.printStackTrace();
+                } catch (ParseException e) {
+                    throw new RuntimeException(e);
                 }
                 loginSuccess();
             }
@@ -222,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
                     VolleyError volleyError = new VolleyError(new String(error.networkResponse.data));
                     try {
                         JSONObject errorJson = new JSONObject(Objects.requireNonNull(volleyError.getMessage()));
+                        Log.i("AERROR", String.valueOf(errorJson));
                         if (error.networkResponse.statusCode==401){
                             if (errorJson.getString("message").equals("Unauthenticated")){
                                 errorPage("login");
@@ -269,15 +306,4 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
         finishAffinity();
     }
-
-    @SuppressLint("DefaultLocale")
-    private String getSubnetAddress(int address)
-    {
-        return String.format(
-            "%d.%d.%d",
-            (address & 0xff),
-            (address >> 8 & 0xff),
-            (address >> 16 & 0xff));
-    }
-
 }
