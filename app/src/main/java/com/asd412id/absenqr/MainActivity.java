@@ -196,7 +196,6 @@ public class MainActivity extends AppCompatActivity {
                 long milliseconds = date.getTime();
                 intent.setAction("START_ALARM");
 
-                // Set the repeating alarm
                 PendingIntent pendingIntent = PendingIntent.getBroadcast(this, jadwal.getInt("id"), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 alarmManager.set(AlarmManager.RTC_WAKEUP, milliseconds, pendingIntent);
             }
@@ -233,13 +232,9 @@ public class MainActivity extends AppCompatActivity {
         request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                JSONObject data;
                 try {
-                    data = response.getJSONObject("data");
-                    editor.putString("name",data.getString("name"));
+                    editor.putString("jadwals", String.valueOf(response.getJSONArray("jadwals_today")));
                     editor.commit();
-
-                    Log.i("LOGIN", String.valueOf(response));
 
                     createAlarm(response.getJSONArray("jadwals"));
                 } catch (JSONException e) {

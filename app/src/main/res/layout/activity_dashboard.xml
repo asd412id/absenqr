@@ -17,7 +17,7 @@
             android:orientation="vertical"
             android:background="@drawable/background_primary"
             android:gravity="center"
-            android:paddingTop="45dp"
+            android:paddingVertical="35dp"
             android:paddingHorizontal="15dp">
 
             <TextView
@@ -47,34 +47,49 @@
                 android:layout_marginTop="10dp"/>
             <ImageView
                 android:id="@+id/dashboard_img"
-                android:layout_width="145dp"
-                android:layout_height="145dp"
+                android:layout_width="135dp"
+                android:layout_height="135dp"
                 android:layout_marginTop="20dp"
                 android:src="@drawable/qrcode"
                 android:contentDescription="@string/login_subtitle"/>
 
             <Button
                 android:id="@+id/btn_scan"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
+                android:paddingHorizontal="15dp"
+                android:paddingVertical="7dp"
                 android:textAllCaps="false"
                 android:text="@string/scan_btn"
                 android:textSize="21sp"
                 android:textColor="@color/colorWhite"
-                android:background="@drawable/button_circle"/>
+                android:background="@drawable/button_1"/>
+            <Button
+                android:id="@+id/btn_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:paddingHorizontal="15dp"
+                android:paddingVertical="7dp"
+                android:textAllCaps="false"
+                android:text="@string/lihat_jadwal"
+                android:textSize="21sp"
+                android:textColor="@color/colorWhite"
+                android:background="@drawable/button_2"/>
             <Button
                 android:id="@+id/btn_exit"
                 android:visibility="gone"
-                android:layout_width="155dp"
-                android:layout_height="50dp"
-                android:layout_marginTop="20dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:paddingHorizontal="15dp"
+                android:paddingVertical="7dp"
                 android:textAllCaps="false"
                 android:text="@string/done"
                 android:textSize="21sp"
                 android:textColor="@color/colorWhite"
                 android:background="@drawable/button_1"/>
-
 
         </LinearLayout>
 

@@ -19,6 +19,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 public class DashboardActivity extends AppCompatActivity {
     SharedPreferences configs;
     Bundle absen;
@@ -28,6 +31,7 @@ public class DashboardActivity extends AppCompatActivity {
     TextView scan_hint;
     Button btn_scan;
     Button btn_exit;
+    Button btn_list;
     ImageView dashboard_img;
 
     @Override
@@ -63,6 +67,7 @@ public class DashboardActivity extends AppCompatActivity {
             scan_hint = findViewById(R.id.scan_hint);
             btn_scan = findViewById(R.id.btn_scan);
             btn_exit = findViewById(R.id.btn_exit);
+            btn_list = findViewById(R.id.btn_list);
             dashboard_img = findViewById(R.id.dashboard_img);
 
             absen = getIntent().getExtras();
@@ -84,6 +89,19 @@ public class DashboardActivity extends AppCompatActivity {
                 }
             }
 
+            String jds = configs.getString("jadwals",null);
+            try {
+                JSONArray jadwal = new JSONArray(jds);
+                if (jadwal.length() == 0){
+                    btn_scan.setVisibility(View.GONE);
+                    btn_list.setVisibility(View.GONE);
+                    btn_exit.setVisibility(View.VISIBLE);
+                    scan_hint.setText("TIDAK ADA JADWAL HARI INI!");
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+
             btn_scan.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -96,6 +114,13 @@ public class DashboardActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     finishAffinity();
                     System.exit(0);
+                }
+            });
+            btn_list.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(DashboardActivity.this,JadwalActivity.class);
+                    startActivity(intent);
                 }
             });
         }
